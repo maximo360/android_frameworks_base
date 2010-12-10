@@ -310,12 +310,12 @@ public class DefaultContainerService extends IntentService {
         boolean checkExt = false;
         boolean checkSDExt = false;
         boolean checkAll = false;
+        // get users prefered install location
+        int installPreference = Settings.System.getInt(getApplicationContext()
+                .getContentResolver(),
+                Settings.Secure.DEFAULT_INSTALL_LOCATION,
+                PackageHelper.APP_INSTALL_AUTO);
         check_inner : {
-            // get users prefered install location
-            int installPreference = Settings.System.getInt(getApplicationContext()
-                    .getContentResolver(),
-                    Settings.Secure.DEFAULT_INSTALL_LOCATION,
-                    PackageHelper.APP_INSTALL_AUTO);
             // Check flags.
             if ((flags & PackageManager.INSTALL_FORWARD_LOCK) != 0) {
                 // Check for forward locked app
@@ -411,11 +411,6 @@ public class DefaultContainerService extends IntentService {
         boolean sdextAvailOk = ((reqInstallSize + reqInternalSize) < availsdextSize);
         boolean fitsOnSDExt = sdextAvailOk;
         boolean fitsOnSd = false;
-        // get users prefered install location
-        int installPreference = Settings.System.getInt(getApplicationContext()
-                .getContentResolver(),
-                Settings.Secure.DEFAULT_INSTALL_LOCATION,
-                PackageHelper.APP_INSTALL_AUTO);
         if (mediaAvailable && (reqInstallSize < availSDSize)) {
             // If we do not have an internal size requirement
             // don't do a threshold check.
@@ -432,14 +427,14 @@ public class DefaultContainerService extends IntentService {
                 return PackageHelper.RECOMMEND_INSTALL_SDEXT;
             }
         }
-        if (checkInt) {
+        if (checkSDExt) {
+            if (fitsOnSDExt) {
+                return PackageHelper.RECOMMEND_INSTALL_SDEXT;
+            }
+        } else if (checkInt) {
             // Check for internal memory availability
             if (fitsOnInt) {
                 return PackageHelper.RECOMMEND_INSTALL_INTERNAL;
-            }
-        } else if (checkSDExt) {
-            if (fitsOnSDExt) {
-                return PackageHelper.RECOMMEND_INSTALL_SDEXT;
             }
         } else if (checkExt) {
             if (fitsOnSd) {
