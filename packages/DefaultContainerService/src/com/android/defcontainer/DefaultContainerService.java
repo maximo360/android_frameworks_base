@@ -311,10 +311,19 @@ public class DefaultContainerService extends IntentService {
         boolean checkSDExt = false;
         boolean checkAll = false;
         check_inner : {
+            // get users prefered install location
+            int installPreference = Settings.System.getInt(getApplicationContext()
+                    .getContentResolver(),
+                    Settings.Secure.DEFAULT_INSTALL_LOCATION,
+                    PackageHelper.APP_INSTALL_AUTO);
             // Check flags.
             if ((flags & PackageManager.INSTALL_FORWARD_LOCK) != 0) {
                 // Check for forward locked app
                 checkInt = true;
+                // fwdlocked apps on sd-ext not working yet. uncomment to get sdext install option
+//                if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
+//                    checkSDExt = true;
+//                }
                 break check_inner;
             } else if ((flags & PackageManager.INSTALL_INTERNAL) != 0) {
                 // Explicit flag to install internally.
@@ -335,22 +344,19 @@ public class DefaultContainerService extends IntentService {
             // Check for manifest option
             if (installLocation == PackageInfo.INSTALL_LOCATION_INTERNAL_ONLY) {
                 checkInt = true;
+                if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
+                    checkSDExt = true;
+                }
                 break check_inner;
             } else if (installLocation == PackageInfo.INSTALL_LOCATION_PREFER_EXTERNAL) {
                 checkExt = true;
                 checkAll = true;
                 break check_inner;
             } else if (installLocation == PackageInfo.INSTALL_LOCATION_AUTO) {
-                checkInt = true;
-                checkSDExt = true;
                 checkAll = true;
                 break check_inner;
             }
             // Pick user preference
-            int installPreference = Settings.System.getInt(getApplicationContext()
-                    .getContentResolver(),
-                    Settings.Secure.DEFAULT_INSTALL_LOCATION,
-                    PackageHelper.APP_INSTALL_AUTO);
             if (installPreference == PackageHelper.APP_INSTALL_INTERNAL) {
                 checkInt = true;
                 break check_inner;
@@ -405,6 +411,11 @@ public class DefaultContainerService extends IntentService {
         boolean sdextAvailOk = ((reqInstallSize + reqInternalSize) < availsdextSize);
         boolean fitsOnSDExt = sdextAvailOk;
         boolean fitsOnSd = false;
+        // get users prefered install location
+        int installPreference = Settings.System.getInt(getApplicationContext()
+                .getContentResolver(),
+                Settings.Secure.DEFAULT_INSTALL_LOCATION,
+                PackageHelper.APP_INSTALL_AUTO);
         if (mediaAvailable && (reqInstallSize < availSDSize)) {
             // If we do not have an internal size requirement
             // don't do a threshold check.
@@ -415,6 +426,12 @@ public class DefaultContainerService extends IntentService {
             }
         }
         boolean fitsOnInt = intThresholdOk && intAvailOk;
+        if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
+            if (fitsOnSDExt) {
+                checkInt = false;
+                return PackageHelper.RECOMMEND_INSTALL_SDEXT;
+            }
+        }
         if (checkInt) {
             // Check for internal memory availability
             if (fitsOnInt) {
