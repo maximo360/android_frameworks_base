@@ -483,7 +483,6 @@ public class DefaultContainerService extends IntentService {
         (long)internalStats.getBlockSize();
         long availInternalSize = (long)internalStats.getAvailableBlocks() *
         (long)internalStats.getBlockSize();
-        double pctNandFree = (double)availInternalSize / (double)totalInternalSize;
 
         StatFs sdextStats = new StatFs(Environment.getSdExtDirectory().getPath());
         long totalsdextSize = (long)sdextStats.getBlockCount() *
@@ -493,6 +492,7 @@ public class DefaultContainerService extends IntentService {
 
         // To make final copy
         long reqInstallSize = size;
+        double pctNandFree = ((double)availInternalSize - reqInstallSize / 2) / (double)totalInternalSize;
         // For dex files. Just ignore and fail when extracting. Max limit of 2Gig for now.
         long reqInternalSize = 0;
         boolean intThresholdOk = (pctNandFree >= LOW_NAND_FLASH_TRESHOLD);
