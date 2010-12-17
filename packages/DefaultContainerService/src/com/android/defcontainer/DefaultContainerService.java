@@ -319,11 +319,12 @@ public class DefaultContainerService extends IntentService {
             // Check flags.
             if ((flags & PackageManager.INSTALL_FORWARD_LOCK) != 0) {
                 // Check for forward locked app
-                checkInt = true;
-                // fwdlocked apps on sd-ext not working yet. uncomment to get sdext install option
-//                if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
-//                    checkSDExt = true;
-//                }
+                // TODO check sd-ext is mounted
+                if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
+                    checkSDExt = true;
+                } else {
+                    checkInt = true;
+                }
                 break check_inner;
             } else if ((flags & PackageManager.INSTALL_INTERNAL) != 0) {
                 // Explicit flag to install internally.
@@ -343,9 +344,11 @@ public class DefaultContainerService extends IntentService {
             }
             // Check for manifest option
             if (installLocation == PackageInfo.INSTALL_LOCATION_INTERNAL_ONLY) {
-                checkInt = true;
+                // TODO check sd-ext is mounted
                 if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
                     checkSDExt = true;
+                } else {
+                    checkInt = true;
                 }
                 break check_inner;
             } else if (installLocation == PackageInfo.INSTALL_LOCATION_PREFER_EXTERNAL) {
@@ -481,13 +484,25 @@ public class DefaultContainerService extends IntentService {
         long availInternalSize = (long)internalStats.getAvailableBlocks() *
         (long)internalStats.getBlockSize();
 
+        StatFs sdextStats = new StatFs(Environment.getSdExtDirectory().getPath());
+        long totalsdextSize = (long)sdextStats.getBlockCount() *
+        (long)sdextStats.getBlockSize();
+        long availsdextSize = (long)sdextStats.getAvailableBlocks() *
+        (long)sdextStats.getBlockSize();
         double pctNandFree = (double)availInternalSize / (double)totalInternalSize;
+
         // To make final copy
         long reqInstallSize = size;
         // For dex files. Just ignore and fail when extracting. Max limit of 2Gig for now.
         long reqInternalSize = 0;
         boolean intThresholdOk = (pctNandFree >= LOW_NAND_FLASH_TRESHOLD);
         boolean intAvailOk = ((reqInstallSize + reqInternalSize) < availInternalSize);
-        return intThresholdOk && intAvailOk;
+        boolean sdextAvailOk = ((reqInstallSize + reqInternalSize) < availsdextSize);
+        // hack to work out if we are moving to sd-ext or data
+        if (packageURI.getPath().substring(1,6).equals("sd-ext")) {
+            return intThresholdOk && intAvailOk;
+        } else {
+            return sdextAvailOk;
+        }
     }
 }
