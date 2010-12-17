@@ -261,7 +261,16 @@ class Installer {
         builder.append(gid);
         return execute(builder.toString());
     }
-    
+
+    public int setForwardLockPermSDEXT(String packagePathSuffix, int gid) {
+        StringBuilder builder = new StringBuilder("protectsdext");
+        builder.append(' ');
+        builder.append(packagePathSuffix);
+        builder.append(' ');
+        builder.append(gid);
+        return execute(builder.toString());
+    }
+
     public int getSizeInfo(String pkgName, String apkPath,
             String fwdLockApkPath, PackageStats pStats) {
         StringBuilder builder = new StringBuilder("getsize");

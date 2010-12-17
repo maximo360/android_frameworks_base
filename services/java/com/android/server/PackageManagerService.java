@@ -5833,6 +5833,17 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return codePath.substring(sidx+1, eidx);
     }
+    // get the first char of path
+    // e.g /sd-ext/app-private returns s
+    // /data/app-private returns d
+    static String getApkLoc(String codePath) {
+        if (codePath == null) {
+            return null;
+        }
+        String ApkLoc = codePath.substring(1);
+        int idx = ApkLoc.indexOf('/');
+        return codePath.substring(1, idx+1);
+    }
 
     class PackageInstalledInfo {
         String name;
@@ -6249,8 +6260,13 @@ class PackageManagerService extends IPackageManager.Stub {
                 //TODO clean up the extracted public files
             }
             if (mInstaller != null) {
-                retCode = mInstaller.setForwardLockPerm(getApkName(newPackage.mPath),
-                        newPackage.applicationInfo.uid);
+                if (getApkLoc(newPackage.mPath).equals("sd-ext")) {
+                    retCode = mInstaller.setForwardLockPermSDEXT(getApkName(newPackage.mPath),
+                            newPackage.applicationInfo.uid);
+                } else {
+                    retCode = mInstaller.setForwardLockPerm(getApkName(newPackage.mPath),
+                            newPackage.applicationInfo.uid);
+                }
             } else {
                 final int filePermissions =
                         FileUtils.S_IRUSR|FileUtils.S_IWUSR|FileUtils.S_IRGRP;
