@@ -483,13 +483,13 @@ public class DefaultContainerService extends IntentService {
         (long)internalStats.getBlockSize();
         long availInternalSize = (long)internalStats.getAvailableBlocks() *
         (long)internalStats.getBlockSize();
+        double pctNandFree = (double)availInternalSize / (double)totalInternalSize;
 
         StatFs sdextStats = new StatFs(Environment.getSdExtDirectory().getPath());
         long totalsdextSize = (long)sdextStats.getBlockCount() *
         (long)sdextStats.getBlockSize();
         long availsdextSize = (long)sdextStats.getAvailableBlocks() *
         (long)sdextStats.getBlockSize();
-        double pctNandFree = (double)availInternalSize / (double)totalInternalSize;
 
         // To make final copy
         long reqInstallSize = size;
@@ -499,7 +499,7 @@ public class DefaultContainerService extends IntentService {
         boolean intAvailOk = ((reqInstallSize + reqInternalSize) < availInternalSize);
         boolean sdextAvailOk = ((reqInstallSize + reqInternalSize) < availsdextSize);
         // hack to work out if we are moving to sd-ext or data
-        if (packageURI.getPath().substring(1,6).equals("sd-ext")) {
+        if (packageURI.getPath().substring(1,7).equals("sd-ext")) {
             return intThresholdOk && intAvailOk;
         } else {
             return sdextAvailOk;
