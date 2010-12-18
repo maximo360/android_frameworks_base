@@ -4912,6 +4912,7 @@ class PackageManagerService extends IPackageManager.Stub {
             int installLocation = pkgLite.installLocation;
             boolean onSd = (flags & PackageManager.INSTALL_EXTERNAL) != 0;
             boolean onSdext = (flags & PackageManager.INSTALL_SDEXT) != 0;
+
             synchronized (mPackages) {
                 PackageParser.Package pkg = mPackages.get(packageName);
                 if (pkg != null) {
@@ -4923,6 +4924,9 @@ class PackageManagerService extends IPackageManager.Stub {
                                 return PackageHelper.RECOMMEND_FAILED_INVALID_LOCATION;
                             }
                             return PackageHelper.RECOMMEND_INSTALL_INTERNAL;
+                        } else if ((pkg.applicationInfo.flags & ApplicationInfo.FLAG_SDEXT_STORAGE) != 0) {
+                            //TODO check sd-ext is mounted
+                            return PackageHelper.RECOMMEND_INSTALL_SDEXT;
                         } else {
                             if (onSd) {
                                 // Install flag overrides everything.
@@ -10107,6 +10111,10 @@ class PackageManagerService extends IPackageManager.Stub {
                    returnCode = PackageManager.MOVE_FAILED_SYSTEM_PACKAGE;
                } else if (pkg.applicationInfo != null &&
                        (pkg.applicationInfo.flags & ApplicationInfo.FLAG_FORWARD_LOCK) != 0) {
+//////////////////////////  For when fwdlock apps are movable                       
+//                       (pkg.applicationInfo.flags & ApplicationInfo.FLAG_FORWARD_LOCK) != 0 &&
+//                       // Allow moving to sd-ext
+//                       (flags & PackageManager.MOVE_SDEXT) == 0) {
                    Slog.w(TAG, "Cannot move forward locked app.");
                    returnCode = PackageManager.MOVE_FAILED_FORWARD_LOCKED;
                } else {
