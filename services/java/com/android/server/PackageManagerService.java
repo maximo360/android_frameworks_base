@@ -4982,7 +4982,7 @@ class PackageManagerService extends IPackageManager.Stub {
             boolean onSd = (flags & PackageManager.INSTALL_EXTERNAL) != 0;
             boolean onInt = (flags & PackageManager.INSTALL_INTERNAL) != 0;
             boolean onSdext = (flags & PackageManager.INSTALL_SDEXT) != 0;
-            if (onInt && onSd || onSdext) {
+            if (onInt && (onSd || onSdext)) {
                 // Check only one bit is set.
                 Slog.w(TAG, "Conflicting flags specified for installing to more than one location");
                 ret = PackageManager.INSTALL_FAILED_INVALID_INSTALL_LOCATION;
