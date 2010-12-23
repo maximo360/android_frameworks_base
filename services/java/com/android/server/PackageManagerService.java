@@ -4924,9 +4924,6 @@ class PackageManagerService extends IPackageManager.Stub {
                                 return PackageHelper.RECOMMEND_FAILED_INVALID_LOCATION;
                             }
                             return PackageHelper.RECOMMEND_INSTALL_INTERNAL;
-                        } else if ((pkg.applicationInfo.flags & ApplicationInfo.FLAG_SDEXT_STORAGE) != 0) {
-                            //TODO check sd-ext is mounted
-                            return PackageHelper.RECOMMEND_INSTALL_SDEXT;
                         } else {
                             if (onSd) {
                                 // Install flag overrides everything.
@@ -4947,6 +4944,10 @@ class PackageManagerService extends IPackageManager.Stub {
                                 // Prefer previous location
                                 if ((pkg.applicationInfo.flags & ApplicationInfo.FLAG_EXTERNAL_STORAGE) != 0) {
                                     return PackageHelper.RECOMMEND_INSTALL_EXTERNAL;
+                                }
+                                if ((pkg.applicationInfo.flags & ApplicationInfo.FLAG_SDEXT_STORAGE) != 0) {
+                                    //TODO check sd-ext is mounted
+                                    return PackageHelper.RECOMMEND_INSTALL_SDEXT;
                                 }
                                 return PackageHelper.RECOMMEND_INSTALL_INTERNAL;
                             }
