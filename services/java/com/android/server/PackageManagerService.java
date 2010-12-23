@@ -4928,7 +4928,8 @@ class PackageManagerService extends IPackageManager.Stub {
                             if (onSd) {
                                 // Install flag overrides everything.
                                 return PackageHelper.RECOMMEND_INSTALL_EXTERNAL;
-                            } else if (onSdext) {
+                            }
+                            if (onSdext) {
                                 // Install flag overrides everything.
                                 return PackageHelper.RECOMMEND_INSTALL_SDEXT;
                             }
@@ -4962,7 +4963,8 @@ class PackageManagerService extends IPackageManager.Stub {
             // Return result based on recommended install location.
             if (onSd) {
                 return PackageHelper.RECOMMEND_INSTALL_EXTERNAL;
-            } else if (onSdext) {
+            }
+            if (onSdext) {
                 return PackageHelper.RECOMMEND_INSTALL_SDEXT;
             }
             return pkgLite.recommendedInstallLocation;
@@ -4980,15 +4982,9 @@ class PackageManagerService extends IPackageManager.Stub {
             boolean onSd = (flags & PackageManager.INSTALL_EXTERNAL) != 0;
             boolean onInt = (flags & PackageManager.INSTALL_INTERNAL) != 0;
             boolean onSdext = (flags & PackageManager.INSTALL_SDEXT) != 0;
-            if (onInt && onSd) {
+            if (onInt && onSd || onSdext) {
                 // Check only one bit is set.
-                Slog.w(TAG, "Conflicting flags specified for installing on both internal and external");
-                ret = PackageManager.INSTALL_FAILED_INVALID_INSTALL_LOCATION;
-            } else if (onInt && onSdext) {
-                Slog.w(TAG, "Conflicting flags specified for installing on both internal and sd-ext");
-                ret = PackageManager.INSTALL_FAILED_INVALID_INSTALL_LOCATION;
-            } else if (onSd && onSdext) {
-                Slog.w(TAG, "Conflicting flags specified for installing on both external and sd-ext");
+                Slog.w(TAG, "Conflicting flags specified for installing to more than one location");
                 ret = PackageManager.INSTALL_FAILED_INVALID_INSTALL_LOCATION;
             } else if (fwdLocked && onSd) {
                 // Check for forward locked apps
@@ -6161,6 +6157,7 @@ class PackageManagerService extends IPackageManager.Stub {
         File tmpPackageFile = new File(args.getCodePath());
         boolean forwardLocked = ((pFlags & PackageManager.INSTALL_FORWARD_LOCK) != 0);
         boolean onSd = ((pFlags & PackageManager.INSTALL_EXTERNAL) != 0);
+        boolean onSdext = ((pFlags & PackageManager.INSTALL_SDEXT) != 0);
         boolean replace = false;
         int scanMode = (onSd ? 0 : SCAN_MONITOR) | SCAN_FORCE_DEX | SCAN_UPDATE_SIGNATURE
                 | (newInstall ? SCAN_NEW_INSTALL : 0);
@@ -6170,7 +6167,8 @@ class PackageManagerService extends IPackageManager.Stub {
         // Retrieve PackageSettings and parse package
         int parseFlags = PackageParser.PARSE_CHATTY |
         (forwardLocked ? PackageParser.PARSE_FORWARD_LOCK : 0) |
-        (onSd ? PackageParser.PARSE_ON_SDCARD : 0);
+        (onSd ? PackageParser.PARSE_ON_SDCARD : 0) |
+        (onSdext ? PackageParser.PARSE_ON_SDEXT : 0);
         parseFlags |= mDefParseFlags;
         PackageParser pp = new PackageParser(tmpPackageFile.getPath());
         pp.setSeparateProcesses(mSeparateProcesses);
@@ -6273,6 +6271,7 @@ class PackageManagerService extends IPackageManager.Stub {
                             newPackage.applicationInfo.uid);
                 }
             } else {
+//TODO use this to set permissions before moving fwdlocked app
                 final int filePermissions =
                         FileUtils.S_IRUSR|FileUtils.S_IWUSR|FileUtils.S_IRGRP;
                 retCode = FileUtils.setPermissions(newPackage.mPath, filePermissions, -1,
@@ -6299,6 +6298,10 @@ class PackageManagerService extends IPackageManager.Stub {
 
     private boolean isExternal(PackageParser.Package pkg) {
         return  ((pkg.applicationInfo.flags & ApplicationInfo.FLAG_EXTERNAL_STORAGE) != 0);
+    }
+
+    private boolean isSdExt(PackageParser.Package pkg) {
+        return  ((pkg.applicationInfo.flags & ApplicationInfo.FLAG_SDEXT_STORAGE) != 0);
     }
 
     private void extractPublicFiles(PackageParser.Package newPackage,
@@ -6645,6 +6648,7 @@ class PackageManagerService extends IPackageManager.Stub {
 
         // Delete application code and resources
         if (deleteCodeAndResources) {
+//TODO ad sd-ext stuff
             // TODO can pick up from PackageSettings as well
             int installFlags = ((p.applicationInfo.flags & ApplicationInfo.FLAG_EXTERNAL_STORAGE)!=0) ?
                     PackageManager.INSTALL_EXTERNAL : 0;
@@ -10111,11 +10115,11 @@ class PackageManagerService extends IPackageManager.Stub {
                    Slog.w(TAG, "Cannot move system application");
                    returnCode = PackageManager.MOVE_FAILED_SYSTEM_PACKAGE;
                } else if (pkg.applicationInfo != null &&
-                       (pkg.applicationInfo.flags & ApplicationInfo.FLAG_FORWARD_LOCK) != 0) {
-//////////////////////////  For when fwdlock apps are movable                       
-//                       (pkg.applicationInfo.flags & ApplicationInfo.FLAG_FORWARD_LOCK) != 0 &&
-//                       // Allow moving to sd-ext
-//                       (flags & PackageManager.MOVE_SDEXT) == 0) {
+/*                       (pkg.applicationInfo.flags & ApplicationInfo.FLAG_FORWARD_LOCK) != 0) {
+*/
+                       (pkg.applicationInfo.flags & ApplicationInfo.FLAG_FORWARD_LOCK) != 0 &&
+                       // Allow moving to sd-ext
+                       (flags & PackageManager.MOVE_SDEXT) == 0) {
                    Slog.w(TAG, "Cannot move forward locked app.");
                    returnCode = PackageManager.MOVE_FAILED_FORWARD_LOCKED;
                } else {
