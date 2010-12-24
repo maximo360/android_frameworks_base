@@ -5834,16 +5834,13 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return codePath.substring(sidx+1, eidx);
     }
-    // get the first char of path
-    // e.g /sd-ext/app-private returns s
-    // /data/app-private returns d
-    static String getApkLoc(String codePath) {
-        if (codePath == null) {
-            return null;
-        }
+    static int getApkLoc(String codePath) {
         String ApkLoc = codePath.substring(1);
         int idx = ApkLoc.indexOf('/');
-        return codePath.substring(1, idx+1);
+        if (codePath.substring(1, idx+1).equals("sd-ext")) {
+            return 0;
+        }
+        return -1;
     }
 
     class PackageInstalledInfo {
@@ -6263,13 +6260,8 @@ class PackageManagerService extends IPackageManager.Stub {
                 //TODO clean up the extracted public files
             }
             if (mInstaller != null) {
-                if (getApkLoc(newPackage.mPath).equals("sd-ext")) {
-                    retCode = mInstaller.setForwardLockPermSDEXT(getApkName(newPackage.mPath),
-                            newPackage.applicationInfo.uid);
-                } else {
-                    retCode = mInstaller.setForwardLockPerm(getApkName(newPackage.mPath),
-                            newPackage.applicationInfo.uid);
-                }
+                retCode = mInstaller.setForwardLockPerm(getApkName(newPackage.mPath),
+                        newPackage.applicationInfo.uid, getApkLoc(newPackage.mPath));
             } else {
 //TODO use this to set permissions before moving fwdlocked app
                 final int filePermissions =

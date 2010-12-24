@@ -244,41 +244,20 @@ int rm_dex(const char *path)
     }
 }
 
-int protect(char *pkgname, gid_t gid)
+int protect(char *pkgname, gid_t gid, int InstLocation)
 {
     struct stat s;
     char pkgpath[PKG_PATH_MAX];
 
     if (gid < AID_SYSTEM) return -1;
 
-    if (create_pkg_path(pkgpath, PROTECTED_DIR_PREFIX, pkgname, ".apk"))
-        return -1;
-
-    if (stat(pkgpath, &s) < 0) return -1;
-
-    if (chown(pkgpath, s.st_uid, gid) < 0) {
-        LOGE("failed to chgrp '%s': %s\n", pkgpath, strerror(errno));
-        return -1;
+    if (InstLocation < 0) {
+        if (create_pkg_path(pkgpath, PROTECTED_DIR_PREFIX, pkgname, ".apk"))
+            return -1;
+    } else {
+        if (create_pkg_path(pkgpath, PROTECTED_EXT_DIR_PREFIX, pkgname, ".apk"))
+            return -1;
     }
-
-    if (chmod(pkgpath, S_IRUSR|S_IWUSR|S_IRGRP) < 0) {
-        LOGE("failed to chmod '%s': %s\n", pkgpath, strerror(errno));
-        return -1;
-    }
-
-    return 0;
-}
-
-int protectsdext(char *pkgname, gid_t gid)
-{
-    struct stat s;
-    char pkgpath[PKG_PATH_MAX];
-
-    if (gid < AID_SYSTEM) return -1;
-
-    if (create_pkg_path(pkgpath, PROTECTED_EXT_DIR_PREFIX, pkgname, ".apk"))
-        return -1;
-
     if (stat(pkgpath, &s) < 0) return -1;
 
     if (chown(pkgpath, s.st_uid, gid) < 0) {
