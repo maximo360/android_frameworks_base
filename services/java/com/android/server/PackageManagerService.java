@@ -680,6 +680,13 @@ class PackageManagerService extends IPackageManager.Stub {
         return false;
     }
 
+    static boolean installOnSdExt(int flags) {
+        if ((flags & PackageManager.INSTALL_SDEXT) != 0) {
+            return true;
+        }
+        return false;
+    }
+
     static boolean isFwdLocked(int flags) {
         if ((flags & PackageManager.INSTALL_FORWARD_LOCK) != 0) {
             return true;
@@ -5118,6 +5125,8 @@ class PackageManagerService extends IPackageManager.Stub {
     private InstallArgs createInstallArgs(InstallParams params) {
         if (installOnSd(params.flags)) {
             return new SdInstallArgs(params);
+        } else if (installOnSdExt(params.flags)) {
+            return new SdExtInstallArgs(params);
         } else {
             return new FileInstallArgs(params);
         }
@@ -5126,6 +5135,8 @@ class PackageManagerService extends IPackageManager.Stub {
     private InstallArgs createInstallArgs(int flags, String fullCodePath, String fullResourcePath) {
         if (installOnSd(flags)) {
             return new SdInstallArgs(fullCodePath, fullResourcePath);
+        } else if (installOnSdExt(flags)) {
+            return new SdExtInstallArgs(fullCodePath, fullResourcePath);
         } else {
             return new FileInstallArgs(fullCodePath, fullResourcePath);
         }
@@ -5136,6 +5147,8 @@ class PackageManagerService extends IPackageManager.Stub {
         if (installOnSd(flags)) {
             String cid = getNextCodePath(null, pkgName, "/" + SdInstallArgs.RES_FILE_NAME);
             return new SdInstallArgs(packageURI, cid);
+        } else if (installOnSdExt(flags)) {
+            return new SdExtInstallArgs(packageURI, pkgName);
         } else {
             return new FileInstallArgs(packageURI, pkgName);
         }
@@ -5175,7 +5188,6 @@ class PackageManagerService extends IPackageManager.Stub {
         String codeFileName;
         String resourceFileName;
         boolean created = false;
-        boolean installOnSdExt = ((flags & PackageManager.INSTALL_SDEXT) != 0);
 
         FileInstallArgs(InstallParams params) {
             super(params.packageURI, params.observer,
@@ -5193,12 +5205,7 @@ class PackageManagerService extends IPackageManager.Stub {
         FileInstallArgs(Uri packageURI, String pkgName) {
             super(packageURI, null, 0, null);
             boolean fwdLocked = isFwdLocked(flags);
-
-            if (installOnSdExt) {
-                installDir = fwdLocked ? mDrmSdExtPrivateInstallDir : mSdExtInstallDir;
-            } else {
-                installDir = fwdLocked ? mDrmAppPrivateInstallDir : mAppInstallDir;
-            }
+            installDir = fwdLocked ? mDrmAppPrivateInstallDir : mAppInstallDir;
             String apkName = getNextCodePath(null, pkgName, ".apk");
             codeFileName = new File(installDir, apkName + ".apk").getPath();
             resourceFileName = getResourcePathFromCodePath();
@@ -5214,11 +5221,7 @@ class PackageManagerService extends IPackageManager.Stub {
 
         void createCopyFile() {
             boolean fwdLocked = isFwdLocked(flags);
-            if (installOnSdExt) {
-                installDir = fwdLocked ? mDrmSdExtPrivateInstallDir : mSdExtInstallDir;
-            } else {
-                installDir = fwdLocked ? mDrmAppPrivateInstallDir : mAppInstallDir;
-            }
+            installDir = fwdLocked ? mDrmAppPrivateInstallDir : mAppInstallDir;
             codeFileName = createTempPackageFile(installDir).getPath();
             resourceFileName = getResourcePathFromCodePath();
             created = true;
@@ -5310,11 +5313,7 @@ class PackageManagerService extends IPackageManager.Stub {
             String codePath = getCodePath();
             if ((flags & PackageManager.INSTALL_FORWARD_LOCK) != 0) {
                 String apkNameOnly = getApkName(codePath);
-                if (installOnSdExt) {
-                    return mSdExtInstallDir.getPath() + "/" + apkNameOnly + ".zip";
-                } else {
-                    return mAppInstallDir.getPath() + "/" + apkNameOnly + ".zip";
-                }
+                return mAppInstallDir.getPath() + "/" + apkNameOnly + ".zip";
             } else {
                 return codePath;
             }
@@ -5342,6 +5341,205 @@ class PackageManagerService extends IPackageManager.Stub {
                     publicSourceFile.delete();
                 }
             }
+            return ret;
+        }
+
+        void cleanUpResourcesLI() {
+            String sourceDir = getCodePath();
+            if (cleanUp() && mInstaller != null) {
+                int retCode = mInstaller.rmdex(sourceDir);
+                if (retCode < 0) {
+                    Slog.w(TAG, "Couldn't remove dex file for package: "
+                            +  " at location "
+                            + sourceDir + ", retcode=" + retCode);
+                    // we don't consider this to be a failure of the core package deletion
+                }
+            }
+        }
+
+        private boolean setPermissions() {
+            // TODO Do this in a more elegant way later on. for now just a hack
+            if (!isFwdLocked(flags)) {
+                final int filePermissions =
+                    FileUtils.S_IRUSR|FileUtils.S_IWUSR|FileUtils.S_IRGRP
+                    |FileUtils.S_IROTH;
+                int retCode = FileUtils.setPermissions(getCodePath(), filePermissions, -1, -1);
+                if (retCode != 0) {
+                    Slog.e(TAG, "Couldn't set new package file permissions for " +
+                            getCodePath()
+                            + ". The return code was: " + retCode);
+                    // TODO Define new internal error
+                    return false;
+                }
+                return true;
+            }
+            return true;
+        }
+
+        boolean doPostDeleteLI(boolean delete) {
+            cleanUpResourcesLI();
+            return true;
+        }
+    }
+
+    class SdExtInstallArgs extends InstallArgs {
+        File installDir;
+        String codeFileName;
+        String resourceFileName;
+        boolean created = false;
+
+        SdExtInstallArgs(InstallParams params) {
+            super(params.packageURI, params.observer,
+                    params.flags, params.installerPackageName);
+        }
+
+        SdExtInstallArgs(String fullCodePath, String fullResourcePath) {
+            super(null, null, 0, null);
+            File codeFile = new File(fullCodePath);
+            installDir = codeFile.getParentFile();
+            codeFileName = fullCodePath;
+            resourceFileName = fullResourcePath;
+        }
+
+        SdExtInstallArgs(Uri packageURI, String pkgName) {
+            super(packageURI, null, 0, null);
+            boolean fwdLocked = isFwdLocked(flags);
+            installDir = fwdLocked ? mDrmSdExtPrivateInstallDir : mSdExtInstallDir;
+            String apkName = getNextCodePath(null, pkgName, ".apk");
+            codeFileName = new File(installDir, apkName + ".apk").getPath();
+            resourceFileName = getResourcePathFromCodePath();
+        }
+
+        boolean  checkFreeStorage(IMediaContainerService imcs) throws RemoteException {
+            return imcs.checkFreeStorage(false, packageURI);
+        }
+
+        String getCodePath() {
+            return codeFileName;
+        }
+
+        void createCopyFile() {
+            boolean fwdLocked = isFwdLocked(flags);
+            installDir = fwdLocked ? mDrmSdExtPrivateInstallDir : mSdExtInstallDir;
+            codeFileName = createTempPackageFile(installDir).getPath();
+            resourceFileName = getResourcePathFromCodePath();
+            created = true;
+        }
+
+        int copyApk(IMediaContainerService imcs, boolean temp) throws RemoteException {
+            if (temp) {
+                // Generate temp file name
+                createCopyFile();
+            }
+            // Get a ParcelFileDescriptor to write to the output file
+            File codeFile = new File(codeFileName);
+            if (!created) {
+                try {
+                    codeFile.createNewFile();
+                    // Set permissions
+                    if (!setPermissions()) {
+                        // Failed setting permissions.
+                        return PackageManager.INSTALL_FAILED_INSUFFICIENT_STORAGE;
+                    }
+                } catch (IOException e) {
+                   Slog.w(TAG, "Failed to create file " + codeFile);
+                   return PackageManager.INSTALL_FAILED_INSUFFICIENT_STORAGE;
+                }
+            }
+            ParcelFileDescriptor out = null;
+            try {
+            out = ParcelFileDescriptor.open(codeFile,
+                    ParcelFileDescriptor.MODE_READ_WRITE);
+            } catch (FileNotFoundException e) {
+                Slog.e(TAG, "Failed to create file descritpor for : " + codeFileName);
+                return PackageManager.INSTALL_FAILED_INSUFFICIENT_STORAGE;
+            }
+            // Copy the resource now
+            int ret = PackageManager.INSTALL_FAILED_INSUFFICIENT_STORAGE;
+            try {
+                if (imcs.copyResource(packageURI, out)) {
+                    ret = PackageManager.INSTALL_SUCCEEDED;
+                }
+            } finally {
+                try { if (out != null) out.close(); } catch (IOException e) {}
+            }
+            return ret;
+        }
+
+        int doPreInstall(int status) {
+            if (status != PackageManager.INSTALL_SUCCEEDED) {
+                cleanUp();
+            }
+            return status;
+        }
+
+        boolean doRename(int status, final String pkgName, String oldCodePath) {
+            if (status != PackageManager.INSTALL_SUCCEEDED) {
+                cleanUp();
+                return false;
+            } else {
+                // Rename based on packageName
+                File codeFile = new File(getCodePath());
+                String apkName = getNextCodePath(oldCodePath, pkgName, ".apk");
+                File desFile = new File(installDir, apkName + ".apk");
+                if (!codeFile.renameTo(desFile)) {
+                    return false;
+                }
+                // Reset paths since the file has been renamed.
+                codeFileName = desFile.getPath();
+                resourceFileName = getResourcePathFromCodePath();
+                // Set permissions
+                if (!setPermissions()) {
+                    // Failed setting permissions.
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        int doPostInstall(int status) {
+            if (status != PackageManager.INSTALL_SUCCEEDED) {
+                cleanUp();
+            }
+            return status;
+        }
+
+        String getResourcePath() {
+            return resourceFileName;
+        }
+
+        String getResourcePathFromCodePath() {
+            String codePath = getCodePath();
+            if ((flags & PackageManager.INSTALL_FORWARD_LOCK) != 0) {
+                String apkNameOnly = getApkName(codePath);
+                return mSdExtInstallDir.getPath() + "/" + apkNameOnly + ".zip";
+            } else {
+                return codePath;
+            }
+        }
+
+        private boolean cleanUp() {
+            boolean ret = true;
+            String sourceDir = getCodePath();
+            String publicSourceDir = getResourcePath();
+            if (sourceDir != null) {
+                File sourceFile = new File(sourceDir);
+                if (!sourceFile.exists()) {
+                    Slog.w(TAG, "Package source " + sourceDir + " does not exist.");
+                    ret = false;
+                }
+                // Delete application's code and resources
+                sourceFile.delete();
+            }
+            if (publicSourceDir != null && !publicSourceDir.equals(sourceDir)) {
+                final File publicSourceFile = new File(publicSourceDir);
+                if (!publicSourceFile.exists()) {
+                    Slog.w(TAG, "Package public source " + publicSourceFile + " does not exist.");
+                }
+                if (publicSourceFile.exists()) {
+                    publicSourceFile.delete();
+                }
+           }
             return ret;
         }
 
