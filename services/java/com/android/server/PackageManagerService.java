@@ -10130,8 +10130,15 @@ class PackageManagerService extends IPackageManager.Stub {
                } else {
                    // Find install location first
                    if ((flags & PackageManager.MOVE_EXTERNAL_MEDIA) != 0 &&
-                           (flags & PackageManager.MOVE_INTERNAL) != 0 &&
-                           (flags & PackageManager.MOVE_SDEXT) != 0) {
+                       (flags & PackageManager.MOVE_INTERNAL) != 0) {
+                       Slog.w(TAG, "Ambigous flags specified for move location.");
+                       returnCode = PackageManager.MOVE_FAILED_INVALID_LOCATION;
+                   } else if ((flags & PackageManager.MOVE_EXTERNAL_MEDIA) != 0 &&
+                       (flags & PackageManager.MOVE_SDEXT) != 0) {
+                       Slog.w(TAG, "Ambigous flags specified for move location.");
+                       returnCode = PackageManager.MOVE_FAILED_INVALID_LOCATION;
+                   } else if ((flags & PackageManager.MOVE_SDEXT) != 0 &&
+                       (flags & PackageManager.MOVE_INTERNAL) != 0) {
                        Slog.w(TAG, "Ambigous flags specified for move location.");
                        returnCode = PackageManager.MOVE_FAILED_INVALID_LOCATION;
                    } else {
