@@ -958,7 +958,7 @@ class PackageManagerService extends IPackageManager.Stub {
                             }
                         }
                     }
-                    if (IsSdExtMounted()) {
+                    if (android.os.Environment.IsSdExtMounted()) {
                         files = mSdExtDalvikCacheDir.list();
                         if (files != null) {
                             for (int i=0; i<files.length; i++) {
