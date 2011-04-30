@@ -132,6 +132,8 @@ public class NotificationManagerService extends INotificationManager.Stub
     private boolean mInCall = false;
     private boolean mNotificationPulseEnabled;
 
+    private boolean mVibrateInCall = true;
+
     private boolean mNotificationBlinkEnabled;
     private boolean mNotificationAlwaysOnEnabled;
     private boolean mNotificationChargingEnabled;
@@ -547,6 +549,9 @@ public class NotificationManagerService extends INotificationManager.Stub
                         Settings.System.QUIET_HOURS_STILL, 0) != 0;
             mQuietHoursDim = Settings.System.getInt(resolver,
                         Settings.System.QUIET_HOURS_DIM, 0) != 0;
+
+            mVibrateInCall = Settings.System.getInt(resolver,
+                        Settings.System.VIBRATE_IN_CALL, 1) != 0;
         }
     }
 
@@ -964,7 +969,9 @@ public class NotificationManagerService extends INotificationManager.Stub
                 .getSystemService(Context.PROFILE_SERVICE);
 
                 Profile currentProfile = profileManager.getActiveProfile();
+                Log.v(TAG, "Active profile: " + currentProfile.getName());
                 ProfileGroup group = profileManager.getActiveProfileGroup(pkg);
+                Log.v(TAG, "Pkg: " + pkg + " group: " + group.getName());
                 notification = currentProfile.processNotification(group.getName(), notification);
             }catch(Throwable th){
                 Log.e(TAG, "An error occurred profiling the notification.", th);
@@ -1013,7 +1020,10 @@ public class NotificationManagerService extends INotificationManager.Stub
                 // vibrate
                 final boolean useDefaultVibrate =
                     (notification.defaults & Notification.DEFAULT_VIBRATE) != 0;
+
+                final boolean vibrateDuringCall = (!mInCall || mVibrateInCall);
                 if (!(inQuietHours && mQuietHoursStill)
+                        && vibrateDuringCall
                         && (useDefaultVibrate || notification.vibrate != null)
                         && audioManager.shouldVibrate(AudioManager.VIBRATE_TYPE_NOTIFICATION)) {
                     mVibrateNotification = r;

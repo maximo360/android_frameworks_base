@@ -67,6 +67,10 @@
 
 #define DISPLAY_COUNT       1
 
+#ifdef USE_LGE_HDMI
+extern "C" void NvDispMgrAutoOrientation(int rotation);
+#endif
+
 namespace android {
 // ---------------------------------------------------------------------------
 
@@ -416,6 +420,10 @@ bool SurfaceFlinger::threadLoop()
 
         logger.log(GraphicLog::SF_SWAP_BUFFERS, index);
         postFramebuffer();
+
+#ifdef USE_LGE_HDMI
+        NvDispMgrAutoOrientation(mCurrentState.orientation);
+#endif
 
         logger.log(GraphicLog::SF_REPAINT_DONE, index);
     } else {
@@ -1270,7 +1278,12 @@ sp<Layer> SurfaceFlinger::createNormalSurface(
         format = PIXEL_FORMAT_RGBA_8888;
         break;
     case PIXEL_FORMAT_OPAQUE:
-        format = PIXEL_FORMAT_RGBX_8888;
+
+#ifdef USE_16BPPSURFACE_FOR_OPAQUE
+        format = PIXEL_FORMAT_RGB_565;
+#else
+         format = PIXEL_FORMAT_RGBX_8888;
+#endif
         break;
     }
 
