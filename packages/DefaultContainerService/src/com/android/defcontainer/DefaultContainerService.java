@@ -413,7 +413,7 @@ public class DefaultContainerService extends IntentService {
                     Settings.Secure.DEFAULT_INSTALL_LOCATION,
                     PackageHelper.APP_INSTALL_AUTO);
 
-            if ((installPreference == PackageHelper.APP_INSTALL_SDEXT) {
+            if (installPreference == PackageHelper.APP_INSTALL_SDEXT) {
                 checkSDExt = true;
             }
             // Check for manifest option
