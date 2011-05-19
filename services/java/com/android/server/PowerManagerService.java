@@ -246,7 +246,7 @@ class PowerManagerService extends IPowerManager.Stub
     private int mScreenBrightnessOverride = -1;
     private int mButtonBrightnessOverride = -1;
     private boolean mUseSoftwareAutoBrightness;
-    private boolean mAutoBrightessEnabled;
+    private boolean mAutoBrightessEnabled = true;
     private int[] mAutoBrightnessLevels;
     private int[] mLcdBacklightValues;
     private int[] mButtonBacklightValues;
@@ -482,6 +482,7 @@ class PowerManagerService extends IPowerManager.Stub
         }
 
         public void update(Observable o, Object arg) {
+
             synchronized (mLocks) {
                 // STAY_ON_WHILE_PLUGGED_IN, default to when plugged into AC
                 mStayOnConditions = getInt(STAY_ON_WHILE_PLUGGED_IN,
@@ -1688,6 +1689,12 @@ class PowerManagerService extends IPowerManager.Stub
                     lightFilterStop();
                     resetLastLightValues();
                 }
+                else if (!mAutoBrightessEnabled) {
+                    /* Force a light sensor reset since we enabled it
+                       when the screen came on */
+                    mAutoBrightessEnabled = true;
+                    setScreenBrightnessMode(Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+                }
             }
         }
         return err;
@@ -2118,11 +2125,12 @@ class PowerManagerService extends IPowerManager.Stub
         }
 
         public void run() {
-            if (mAnimateScreenLights ||
-                    (!mAnimateScreenLights && Settings.System.getInt(mContext.getContentResolver(),
-                            ELECTRON_BEAM_ANIMATION_OFF,
-                            mContext.getResources().getBoolean(
-                                    com.android.internal.R.bool.config_enableScreenOffAnimation) ? 1 : 0) == 0)) {
+            // Check for the electron beam for fully on/off transitions.
+            // Otherwise, allow it to fade the brightness as normal.
+            final boolean electrifying = animating &&
+                ((mElectronBeamAnimationOff && targetValue == Power.BRIGHTNESS_OFF) ||
+                 (mElectronBeamAnimationOn && (int)curValue == Power.BRIGHTNESS_OFF));
+            if (mAnimateScreenLights || !electrifying) {
                 synchronized (mLocks) {
                     long now = SystemClock.uptimeMillis();
                     boolean more = mScreenBrightness.stepLocked();
@@ -2132,9 +2140,7 @@ class PowerManagerService extends IPowerManager.Stub
                 }
             } else {
                 synchronized (mLocks) {
-                    // we're turning off
-                    final boolean animate = animating && targetValue == Power.BRIGHTNESS_OFF;
-                    if (animate) {
+                    if (electrifying) {
                         // It's pretty scary to hold mLocks for this long, and we should
                         // redesign this, but it works for now.
                         nativeStartSurfaceFlingerAnimation(
@@ -2572,6 +2578,7 @@ class PowerManagerService extends IPowerManager.Stub
             }
             return;
         }
+
 
         // do not allow light sensor value to decrease unless
         // user has actively permitted it
