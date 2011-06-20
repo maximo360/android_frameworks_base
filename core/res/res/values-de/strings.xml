@@ -194,7 +194,7 @@
     <string name="permgroupdesc_messages" msgid="7045736972019211994">"Lesen und schreiben Sie Ihre SMS, E-Mails und anderen Nachrichten."</string>
     <string name="permgrouplab_personalInfo" msgid="3519163141070533474">"Ihre persönlichen Informationen"</string>
     <string name="permgroupdesc_personalInfo" msgid="5488050357388806068">"Direkter Zugriff auf die Kontakte und den Kalender Ihres Telefons"</string>
-    <string name="permgrouplab_location" msgid="635149742436692049">"Ihren Standort"</string>
+    <string name="permgrouplab_location" msgid="635149742436692049">"Meinen Standort"</string>
     <string name="permgroupdesc_location" msgid="2430258821648348660">"Ihren physischen Standort überwachen"</string>
     <string name="permgrouplab_network" msgid="5808983377727109831">"Netzwerkkommunikation"</string>
     <string name="permgroupdesc_network" msgid="5035763698958415998">"Ermöglicht Anwendungen den Zugriff auf verschiedene Netzwerkfunktionen"</string>
@@ -757,6 +757,7 @@
     <string name="elapsed_time_short_format_mm_ss" msgid="4431555943828711473">"<xliff:g id="MINUTES">%1$02d</xliff:g>:<xliff:g id="SECONDS">%2$02d</xliff:g>"</string>
     <string name="elapsed_time_short_format_h_mm_ss" msgid="1846071997616654124">"<xliff:g id="HOURS">%1$d</xliff:g>:<xliff:g id="MINUTES">%2$02d</xliff:g>:<xliff:g id="SECONDS">%3$02d</xliff:g>"</string>
     <string name="selectAll" msgid="6876518925844129331">"Alles auswählen"</string>
+    <string name="copyAll">"Alles kopieren"</string>
     <string name="selectText" msgid="4862359311088898878">"Wort auswählen"</string>
     <string name="cut" msgid="3092569408438626261">"Ausschneiden"</string>
     <string name="copy" msgid="2681946229533511987">"Kopieren"</string>

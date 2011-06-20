@@ -110,10 +110,15 @@ public class PhoneFactory {
                 //reads the system properties and makes commandsinterface
 
                 String sRILClassname = SystemProperties.get("ro.telephony.ril_class");
+                Log.i(LOG_TAG, "RILClassname is " + sRILClassname);
 
-                if(sRILClassname == "samsung")
+                if("samsung".equals(sRILClassname))
                 {
+                    Log.i(LOG_TAG, "Using Samsung RIL");
                     sCommandsInterface = new SamsungRIL(context, networkMode, cdmaSubscription);
+                } else if("lgestar".equals(sRILClassname)) {
+                    Log.i(LOG_TAG, "Using LGE Star RIL");
+                    sCommandsInterface = new LGEStarRIL(context, networkMode, cdmaSubscription);
                 } else {
                     sCommandsInterface = new RIL(context, networkMode, cdmaSubscription);
                 }

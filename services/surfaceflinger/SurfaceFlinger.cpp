@@ -421,10 +421,6 @@ bool SurfaceFlinger::threadLoop()
         logger.log(GraphicLog::SF_SWAP_BUFFERS, index);
         postFramebuffer();
 
-#ifdef USE_LGE_HDMI
-        NvDispMgrAutoOrientation(mCurrentState.orientation);
-#endif
-
         logger.log(GraphicLog::SF_REPAINT_DONE, index);
     } else {
         // pretend we did the post
@@ -1190,6 +1186,9 @@ int SurfaceFlinger::setOrientation(DisplayID dpy,
         if (uint32_t(orientation)<=eOrientation270 || orientation==42) {
             mCurrentState.orientationType = flags;
             mCurrentState.orientation = orientation;
+#ifdef USE_LGE_HDMI
+            NvDispMgrAutoOrientation(mCurrentState.orientation);
+#endif
             setTransactionFlags(eTransactionNeeded);
             mTransactionCV.wait(mStateLock);
         } else {
@@ -1708,6 +1707,10 @@ status_t SurfaceFlinger::renderScreenToTextureLocked(DisplayID dpy,
 
 // ---------------------------------------------------------------------------
 
+#ifndef ELECTRONBEAM_FRAMES
+ #define ELECTRONBEAM_FRAMES 12
+#endif
+
 status_t SurfaceFlinger::electronBeamOffAnimationImplLocked()
 {
     status_t result = PERMISSION_DENIED;
@@ -1790,8 +1793,8 @@ status_t SurfaceFlinger::electronBeamOffAnimationImplLocked()
         }
     };
 
-    // the full animation is 24 frames
-    const int nbFrames = 12;
+    // the full animation is 2*ELECTRONBEAM_FRAMES frames
+    const int nbFrames = ELECTRONBEAM_FRAMES;
     s_curve_interpolator itr(nbFrames, 7.5f);
     s_curve_interpolator itg(nbFrames, 8.0f);
     s_curve_interpolator itb(nbFrames, 8.5f);

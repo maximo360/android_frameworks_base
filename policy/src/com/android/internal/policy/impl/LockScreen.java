@@ -52,7 +52,10 @@ import android.os.ParcelFileDescriptor;
 import android.os.BatteryManager;
 import android.os.SystemClock;
 import android.os.SystemProperties;
+import android.os.Vibrator;
 import android.provider.Settings;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -129,10 +132,6 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
     private AudioManager mAudioManager;
     private String mDateFormatString;
     private boolean mEnableMenuKeyInLockScreen;
-
-    // time format from system settings - contains 12 or 24
-    private int mTime12_24 = (Settings.System.getInt(mContext.getContentResolver(),
-            Settings.System.TIME_12_24, 12));
 
     private boolean mTrackballUnlockScreen = (Settings.System.getInt(mContext.getContentResolver(),
             Settings.System.TRACKBALL_UNLOCK_SCREEN, 0) == 1);
@@ -337,8 +336,19 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
         if (mSelector2 != null) {
             mSelector2.setHoldAfterTrigger(true, false);
             mSelector2.setLeftHintText(R.string.lockscreen_phone_label);
-            mSelector2.setRightHintText(R.string.lockscreen_messaging_label);
+
+            if (mCustomAppActivity != null) {
+                Intent i;
+                try {
+                    i = Intent.parseUri(mCustomAppActivity, 0);
+                    PackageManager pm = context.getPackageManager();
+                    ActivityInfo ai = i.resolveActivityInfo(pm,PackageManager.GET_ACTIVITIES);
+                    mSelector2.setRightHintText(ai.loadLabel(pm).toString());
+                } catch (URISyntaxException e) {
+                }
+            }
         }
+
         mEmergencyCallText = (TextView) findViewById(R.id.emergencyCallText);
         mEmergencyCallButton = (Button) findViewById(R.id.emergencyCallButton);
         mEmergencyCallButton.setText(R.string.lockscreen_emergency_call);
@@ -426,7 +436,6 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
         mRotarySelector.setLenseSquare(mUseRotaryRevLockscreen);
         if(mRotaryHideArrows)
             mRotarySelector.hideArrows(true);
-        mRotarySelector.setTimeFormat(mTime12_24);
 
         //hide most items when we are in potrait lense mode
         mLensePortrait=(mUseLenseSquareLockscreen && mCreationOrientation != Configuration.ORIENTATION_LANDSCAPE);
@@ -1082,12 +1091,12 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
     }
 
     static CharSequence getCarrierString(CharSequence telephonyPlmn, CharSequence telephonySpn) {
-        if (telephonyPlmn != null && telephonySpn == null) {
+        if (telephonyPlmn != null && (telephonySpn == null || "".contentEquals(telephonySpn))) {
             return telephonyPlmn;
+        } else if (telephonySpn != null && (telephonyPlmn == null || "".contentEquals(telephonyPlmn))) {
+            return telephonySpn;
         } else if (telephonyPlmn != null && telephonySpn != null) {
             return telephonyPlmn + "|" + telephonySpn;
-        } else if (telephonyPlmn == null && telephonySpn != null) {
-            return telephonySpn;
         } else {
             return "";
         }
@@ -1199,7 +1208,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
     public void onGesturePerformed(GestureOverlayView overlay, Gesture gesture) {
         ArrayList<Prediction> predictions = mLibrary.recognize(gesture);
         if (predictions.size() > 0 && predictions.get(0).score > mGestureSensitivity) {
-            String[] payload = predictions.get(0).name.split("___", 2);
+            String[] payload = predictions.get(0).name.split("___", 3);
             String uri = payload[1];
             if (uri != null) {
                 if ("UNLOCK".equals(uri)) {
@@ -1216,7 +1225,20 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
                         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
                         mContext.startActivity(i);
-                        mCallback.goToUnlockScreen();
+                        // Run in background if requested
+                        if (payload.length > 2) {
+                            // Define vibrator
+                            Vibrator v = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+                            // Vibrate pattern when gesture is correct
+                            long[] pattern = {
+                                0, 200
+                            };
+                            v.vibrate(pattern, -1);
+
+                            mCallback.pokeWakelock();
+                        } else {
+                            mCallback.goToUnlockScreen();
+                        }
                     } catch (URISyntaxException e) {
                     } catch (ActivityNotFoundException e) {
                     }
@@ -1225,7 +1247,8 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
             mCallback.pokeWakelock(); // reset timeout - give them another chance to gesture
         }
     }
-// shameless kang of music widgets
+
+    // shameless kang of music widgets
     public static Uri getArtworkUri(Context context, long song_id, long album_id) {
 
         if (album_id < 0) {
@@ -1298,7 +1321,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
         mNowPlaying.setVisibility(visibility);
         mAlbumArt.setVisibility(visibility);
 
-        if (mTime12_24 == 24)
+        if (DateFormat.is24HourFormat(mContext))
             mAmPm.setVisibility(View.INVISIBLE);
 
         mNowPlayingToggle = false;

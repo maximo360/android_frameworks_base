@@ -970,6 +970,14 @@ public final class ActivityManagerService extends ActivityManagerNative
         //public Handler() {
         //    if (localLOGV) Slog.v(TAG, "Handler started!");
         //}
+        private boolean isRevokeEnabled() {
+            int defalut = mContext.getResources().getBoolean(
+                    com.android.internal.R.bool.config_enablePermissionsManagement) ? 1 : 0;
+            int res = android.provider.Settings.Secure.getInt(mContext.getContentResolver(),
+                    android.provider.Settings.Secure.ENABLE_PERMISSIONS_MANAGEMENT,
+                    defalut);
+            return res == 1;
+        }
 
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -983,7 +991,22 @@ public final class ActivityManagerService extends ActivityManagerNative
                     }
                     AppErrorResult res = (AppErrorResult) data.get("result");
                     if (!mSleeping && !mShuttingDown) {
-                        Dialog d = new AppErrorDialog(mContext, res, proc);
+                        boolean hasRevoked = false;
+                        if (isRevokeEnabled()) {
+                            for (String s: proc.pkgList) {
+                                try {
+                                    String[] perms = AppGlobals.getPackageManager().getRevokedPermissions(s);
+                                    if (perms != null && perms.length > 0) {
+                                        hasRevoked = true;
+                                        break;
+                                    }
+                                }
+                                catch (RemoteException e) {
+                                    // just ignore this.
+                                }
+                            }
+                        }
+                        Dialog d = new AppErrorDialog(mContext, res, proc, hasRevoked);
                         d.show();
                         proc.crashDialog = d;
                     } else {
@@ -6950,6 +6973,16 @@ public final class ActivityManagerService extends ActivityManagerNative
             if (res == AppErrorDialog.FORCE_QUIT_AND_REPORT) {
                 appErrorIntent = createAppErrorIntentLocked(r, timeMillis, crashInfo);
             }
+            else if (res == AppErrorDialog.FORCE_QUIT_AND_RESET_PERMS) {
+                for (String pkg: r.pkgList) {
+                    long oldId = Binder.clearCallingIdentity();
+                    try {
+                        AppGlobals.getPackageManager().setRevokedPermissions(pkg, new String[0]);
+                    } catch (RemoteException e) {
+                    }
+                    Binder.restoreCallingIdentity(oldId);
+                }
+            }
         }
 
         if (appErrorIntent != null) {
@@ -8714,7 +8747,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 ServiceRecord.StartItem si = r.pendingStarts.remove(0);
                 if (DEBUG_SERVICE) Slog.v(TAG, "Sending arguments to: "
                         + r + " " + r.intent + " args=" + si.intent);
-                if (si.intent == null) {
+                if (si.intent == null && N > 1) {
                     // If somehow we got a dummy start at the front, then
                     // just drop it here.
                     continue;

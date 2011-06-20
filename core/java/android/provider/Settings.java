@@ -934,6 +934,76 @@ public final class Settings {
 
         /**
          * Convenience function for retrieving a single system settings value
+         * as an array of {@code long}.  Note that internally setting values are always
+         * stored as strings; this function converts the string to a {@code long}
+         * array for you.  The default value will be returned if the setting is
+         * not defined or not a {@code long} array.
+         *
+         * @param cr The ContentResolver to access.
+         * @param name The name of the setting to retrieve.
+         * @param def Value to return if the setting is not defined.
+         *
+         * @return The setting's current value, or 'def' if it is not defined
+         * or not a valid {@code long}.
+         * @hide
+         */
+        public static long[] getLongArray(ContentResolver cr, String name, long[] def) {
+            String valString = getString(cr, name);
+            long[] value;
+
+            try {
+                value = valString != null ? stringToLongArray(valString) : def;
+            } catch (NumberFormatException e) {
+                value = def;
+            }
+            return value;
+        }
+
+        /**
+         * Convenience function for retrieving a single system settings value
+         * as an array of {@code long}.  Note that internally setting values are always
+         * stored as strings; this function converts the string to a {@code long} array
+         * for you.
+         * <p>
+         * This version does not take a default value.  If the setting has not
+         * been set, or the string value is not a number,
+         * it throws {@link SettingNotFoundException}.
+         *
+         * @param cr The ContentResolver to access.
+         * @param name The name of the setting to retrieve.
+         *
+         * @return The setting's current value.
+         * @throws SettingNotFoundException Thrown if a setting by the given
+         * name can't be found or the setting value is not a long array.
+         * @hide
+         */
+        public static long[] getLongArray(ContentResolver cr, String name)
+                throws SettingNotFoundException {
+            String valString = getString(cr, name);
+            try {
+                return stringToLongArray(valString);
+            } catch (NumberFormatException e) {
+                throw new SettingNotFoundException(name);
+            }
+        }
+
+        private static long[] stringToLongArray(String inpString)
+                throws NumberFormatException {
+            if (inpString == null) {
+                throw new NumberFormatException();
+            }
+            String[] splitStr = inpString.split(",");
+            int los = splitStr.length;
+            long[] returnLong = new long[los];
+            int i;
+            for (i = 0; i < los; i++) {
+                returnLong[i] = Long.parseLong(splitStr[i].trim());
+            }
+            return returnLong;
+        }
+
+        /**
+         * Convenience function for retrieving a single system settings value
          * as a floating point number.  Note that internally setting values are
          * always stored as strings; this function converts the string to an
          * float for you. The default value will be returned if the setting
@@ -1739,12 +1809,17 @@ public final class Settings {
         public static final String ACCELEROMETER_ROTATION = "accelerometer_rotation";
 
          /**
-         * Control weather 180 degree rotation should be included if
-         * ACCELEROMETER_ROTATION is enabled. If 0 no 180 degree rotation will be
-         * executed, if 1 the 180 degree rotation is executed when ACCELEROMETER_ROTATION is true.
+         * Control the type of rotation which can be performed using the accelerometer
+         * if ACCELEROMETER_ROTATION is enabled.
+         * Value is a bitwise combination of
+         * 1 = 90 degrees (left)
+         * 2 = 180 degrees (inverted)
+         * 4 = 270 degrees (right)
+         * Normal portrait (0 degrees) is always enabled
+         * Default is 5 (90 & 270 degrees), like stock Android
          * @hide
          */
-        public static final String ACCELEROMETER_ROTATE_180 = "accelerometer_rotate_180";
+        public static final String ACCELEROMETER_ROTATION_MODE = "accelerometer_rotation_mode";
 
         /**
          * Specifies the number of recent apps to show (8, 12, 16)
@@ -1781,6 +1856,18 @@ public final class Settings {
          * @hide
          */
         public static final String USE_CUSTOM_SEARCH_APP_ACTIVITY = "use_custom_search_app_activity";
+
+        /**
+         * Contains what to do upon long press menu
+         * @hide
+         */
+        public static final String USE_CUSTOM_LONG_MENU = "use_custom_long_press_menu";
+
+        /**
+         * Contains activity to start on long menu key press
+         * @hide
+         */
+        public static final String USE_CUSTOM_LONG_MENU_APP_ACTIVITY = "use_custom_long_menu_app_activity";
 
         /**
          * Specifies whether or not to use a custom app on long search key press
@@ -2311,6 +2398,13 @@ public final class Settings {
          */
         public static final String STATUS_BAR_COMPACT_CARRIER = "status_bar_compact_carrier";
 
+         /**
+         * Whether to control brightness from status bar
+         *
+         * @hide
+         */
+        public static final String STATUS_BAR_BRIGHTNESS_TOGGLE = "status_bar_brightness_toggle";
+
         /**
          * Whether to wake the screen with the trackball. The value is boolean (1 or 0).
          * @hide
@@ -2553,6 +2647,13 @@ public final class Settings {
         public static final String EXPANDED_HIDE_SCROLLBAR = "expanded_hide_scrollbar";
 
         /**
+         * Hide indicator in status bar widget
+         *
+         * @hide
+         */
+        public static final String EXPANDED_HIDE_INDICATOR = "expanded_hide_indicator";
+
+        /**
          * Notification Indicator Color
          *
          * @hide
@@ -2743,7 +2844,7 @@ public final class Settings {
             TIME_12_24,
             DATE_FORMAT,
             ACCELEROMETER_ROTATION,
-            ACCELEROMETER_ROTATE_180,
+            ACCELEROMETER_ROTATION_MODE,
             DTMF_TONE_WHEN_DIALING,
             DTMF_TONE_TYPE_WHEN_DIALING,
             EMERGENCY_TONE,
@@ -4542,6 +4643,12 @@ public final class Settings {
          * @hide
          */
         public static final String MVNO_ROAMING = "button_mvno_roaming_key";
+
+        /**
+         * Whether to enable permissions management.
+         * @hide
+         */
+        public static final String ENABLE_PERMISSIONS_MANAGEMENT = "enable_permissions_management";
 
         /**
          * @hide
