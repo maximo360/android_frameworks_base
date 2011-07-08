@@ -179,6 +179,7 @@
     <string name="global_actions_toggle_airplane_mode" msgid="5884330306926307456">"Modalità aereo"</string>
     <string name="global_actions_airplane_mode_on_status" msgid="2719557982608919750">"Modalità aereo attiva"</string>
     <string name="global_actions_airplane_mode_off_status" msgid="5075070442854490296">"Modalità aereo non attiva"</string>
+    <string name="global_action_screenshot">Cattura schermata</string>
     <string name="safeMode" msgid="2788228061547930246">"Modalità provvisoria"</string>
     <string name="android_system_label" msgid="6577375335728551336">"Sistema Android"</string>
     <string name="permgrouplab_costMoney" msgid="5429808217861460401">"Servizi che prevedono un costo"</string>
@@ -620,8 +621,6 @@
     <string name="lockscreen_sound_off_label" msgid="996822825154319026">"Audio disattivato"</string>
     <!-- Displayed on lock screen's extra left tab - phone -->
     <string name="lockscreen_phone_label">Telefono</string>
-    <!-- Displayed on lock screen's extra right tab - messaging -->
-    <string name="lockscreen_messaging_label">Messaggi</string>
     <string name="password_keyboard_label_symbol_key" msgid="992280756256536042">"?123"</string>
     <string name="password_keyboard_label_alpha_key" msgid="8001096175167485649">"ABC"</string>
     <string name="password_keyboard_label_alt_key" msgid="1284820942620288678">"ALT"</string>
